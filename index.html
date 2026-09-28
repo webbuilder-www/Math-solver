@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MathBreak – step-by-step math solver</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.2/math.min.js"></script>
+<style>
+:root{--g:#22ff6a;--g2:#0e9f3f;--line:#14522a;--txt:#d8ffe4;--mut:#6bb083}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#000;color:var(--txt);font:16px/1.6 Sora,system-ui,sans-serif;overflow-x:hidden}
+#rain{position:fixed;inset:0;width:100%;height:100%;z-index:0;opacity:.28;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:0 20px}
+nav{display:flex;align-items:center;gap:10px;padding:22px 0;font-weight:800}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--g);animation:ping 2s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 #22ff6a99}100%{box-shadow:0 0 0 14px #22ff6a00}}
+h1{font-size:clamp(2.1rem,7vw,3.6rem);line-height:1.08;font-weight:800;margin:36px 0 14px;background:linear-gradient(100deg,var(--g2) 20%,#eafff0 50%,var(--g2) 80%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 5s linear infinite}
+@keyframes sheen{to{background-position:-250% 0}}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}}
+.sub{color:var(--mut);max-width:52ch;animation:rise .9s .15s both}
+.solver{margin-top:28px;display:flex;gap:10px;flex-wrap:wrap;animation:rise .9s .3s both}
+#q{flex:1 1 260px;background:#020a05;border:1px solid var(--line);border-radius:12px;color:var(--g);font:500 1.1rem 'JetBrains Mono',monospace;padding:16px 18px;outline:none;transition:.25s}
+#q:focus{border-color:var(--g);box-shadow:0 0 0 4px #22ff6a22,0 0 30px #22ff6a33;transform:translateY(-2px)}
+#go{cursor:pointer;font:700 1rem Sora,sans-serif;border:0;border-radius:12px;background:var(--g);color:#001a08;padding:16px 28px;transition:transform .15s,box-shadow .25s;animation:pulse 2.4s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #22ff6a55}50%{box-shadow:0 0 0 10px #22ff6a00}}
+#go:hover{transform:translateY(-2px);box-shadow:0 8px 30px #22ff6a55}
+#go:active{transform:scale(.96)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;animation:rise .9s .45s both}
+.chip{font:.82rem 'JetBrains Mono',monospace;background:none;border:1px solid var(--line);color:var(--mut);padding:6px 12px;border-radius:99px;cursor:pointer;transition:.2s}
+.chip:hover{color:#000;background:var(--g);border-color:var(--g);transform:translateY(-3px) rotate(-1.5deg)}
+details{margin-top:22px;border:1px dashed var(--line);border-radius:12px;padding:12px 16px;color:var(--mut);font-size:.9rem}
+summary{cursor:pointer;color:var(--g)}
+details input{width:100%;margin-top:10px;background:#020a05;border:1px solid var(--line);border-radius:8px;color:var(--g);padding:10px;font:.9rem 'JetBrains Mono',monospace}
+#out{margin:34px 0 10px;display:grid;gap:12px}
+.step{display:flex;gap:16px;background:linear-gradient(90deg,#0a2413,#04100a);border:1px solid var(--line);border-left:3px solid var(--g);border-radius:12px;padding:16px 18px;animation:slide .55s calc(var(--i)*.14s) both cubic-bezier(.2,.8,.2,1)}
+@keyframes slide{from{opacity:0;transform:translateX(-30px)}}
+.step b{flex:none;width:30px;height:30px;border-radius:50%;background:var(--g);color:#001a08;display:grid;place-items:center;font-size:.85rem}
+.step h3{font-size:1rem;margin-bottom:4px}
+.step code{font:1rem/1.5 'JetBrains Mono',monospace;color:var(--g);white-space:pre-wrap;word-break:break-word}
+.err code{color:#ffd27a}
+.ans{border:1px solid var(--g);border-radius:14px;padding:20px;text-align:center;background:#03150a;animation:pop .6s calc(var(--i)*.14s) both cubic-bezier(.3,1.6,.5,1),glow 2.6s infinite}
+.ans small{color:var(--mut);display:block}
+.ans strong{font:700 1.6rem 'JetBrains Mono',monospace;color:var(--g);text-shadow:0 0 18px #22ff6a88;word-break:break-word}
+@keyframes pop{from{opacity:0;transform:scale(.7)}}
+@keyframes glow{50%{box-shadow:0 0 34px #22ff6a44}}
+.load{display:flex;gap:8px;justify-content:center;padding:20px}
+.load i{width:12px;height:12px;border-radius:50%;background:var(--g);animation:bounce .9s infinite}
+.load i:nth-child(2){animation-delay:.15s}.load i:nth-child(3){animation-delay:.3s}
+@keyframes bounce{50%{transform:translateY(-14px);opacity:.4}}
+h2{font-size:1.5rem;margin:70px 0 18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.card{opacity:0;border:1px solid var(--line);border-radius:14px;padding:18px;background:#040e07;transition:border-color .3s,box-shadow .3s}
+.card.in{animation:up .7s calc(var(--i)*.1s) both}
+@keyframes up{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
+.card:hover{border-color:var(--g);box-shadow:0 0 24px #22ff6a2a}
+.sym{display:block;font:700 1.8rem 'JetBrains Mono',monospace;color:var(--g);margin-bottom:6px;animation:float 3s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-6px)}}
+.card p{color:var(--mut);font-size:.92rem}
+footer{padding:60px 0 40px;color:var(--mut);font-size:.85rem;text-align:center}
+:focus-visible{outline:2px solid var(--g);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.card{opacity:1}}
+</style>
+</head>
+<body>
+<canvas id="rain"></canvas>
+<div class="wrap">
+  <nav><span class="dot"></span>MathBreak</nav>
+  <h1>Any math problem, one step at a time.</h1>
+  <p class="sub">Type a problem and get every move explained, from the first line to the final answer.</p>
+
+  <div class="solver">
+    <input id="q" autocomplete="off" spellcheck="false" placeholder="Try: x^2 - 5x + 6 = 0" aria-label="Math problem">
+    <button id="go">Solve it</button>
+  </div>
+  <div class="chips">
+    <button class="chip">12 + 3 * (8 - 2)^2</button>
+    <button class="chip">2x + 6 = 14</button>
+    <button class="chip">x^2 - 5x + 6 = 0</button>
+    <button class="chip">derivative of x^3 + 4x</button>
+    <button class="chip">simplify (x+1)^2 - x^2</button>
+  </div>
+  <details>
+    <summary>AI mode for word problems and everything else</summary>
+    <p style="margin-top:8px">Paste an Anthropic API key. It stays in this tab and is only sent to Anthropic when the built-in solver can't handle a problem.</p>
+    <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off">
+  </details>
+
+  <div id="out" aria-live="polite"></div>
+
+  <h2>What it can solve</h2>
+  <div class="grid">
+    <div class="card"><span class="sym">+ − × ÷</span><h3>Arithmetic</h3><p>Order of operations, one move at a time.</p></div>
+    <div class="card"><span class="sym">x =</span><h3>Equations</h3><p>Linear and quadratic, with the discriminant shown.</p></div>
+    <div class="card"><span class="sym">d/dx</span><h3>Derivatives</h3><p>Rules applied, then simplified.</p></div>
+    <div class="card"><span class="sym">?</span><h3>Word problems</h3><p>AI mode turns a story into clear steps.</p></div>
+  </div>
+  <footer>MathBreak · runs in your browser</footer>
+</div>
+
+<script>
+const $=s=>document.querySelector(s),out=$('#out'),q=$('#q'),apiKey=$('#apiKey');
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const N=v=>String(+(+v).toFixed(6));
+const z=v=>Math.abs(v)<1e-9;
+const P=(a,b,c)=>{let s='';[[a,'x²'],[b,'x'],[c,'']].forEach(([v,u])=>{if(z(v))return;const m=Math.abs(v),co=(m===1&&u)?'':N(m);s+=(s?(v<0?' − ':' + '):(v<0?'−':''))+co+u});return s||'0'};
+const OPS={'+':'Add','-':'Subtract','*':'Multiply','/':'Divide','^':'Raise to the power'};
+const isC=a=>a.isConstantNode||(a.isOperatorNode&&a.fn==='unaryMinus'&&a.args[0].isConstantNode);
+
+function arith(s){
+  const val=math.evaluate(s);
+  if(typeof val!=='number')return null;
+  let node=math.parse(s);
+  const steps=[{t:'Start with the expression',w:node.toString()}];
+  for(let i=0;i<25&&!node.isConstantNode;i++){
+    let t=null;
+    node.traverse(n=>{if(!t&&((n.isOperatorNode&&n.args.length>1)||n.isFunctionNode)&&n.args.every(isC))t=n});
+    if(!t)break;
+    const txt=t.toString(),v=math.round(math.evaluate(txt),10);
+    node=node.transform(n=>n===t?new math.ConstantNode(v):n);
+    node=node.transform(n=>n.isParenthesisNode&&n.content.isConstantNode?n.content:n);
+    steps.push({t:(t.isOperatorNode?(OPS[t.op]||'Work out'):'Evaluate')+': '+txt,w:node.toString()});
+  }
+  if(!node.isConstantNode)steps.push({t:'Evaluate what is left',w:N(val)});
+  return{steps,ans:math.format(val,{precision:10})};
+}
+function eq(s){
+  const p=s.split('=');if(p.length!==2)return null;
+  const f=x=>math.evaluate(`(${p[0]})-(${p[1]})`,{x});
+  const c=f(0),u=f(1),d=f(-1),a=(u+d)/2-c,b=(u-d)/2;
+  if([2,3].some(x=>Math.abs(f(x)-(a*x*x+b*x+c))>1e-7))return null;
+  const steps=[{t:'Move everything to one side',w:P(a,b,c)+' = 0'}];
+  if(z(a)){
+    if(z(b))return{steps,ans:z(c)?'Every x works':'No solution'};
+    steps.push({t:'Move the constant to the right',w:P(0,b,0)+' = '+N(-c)},{t:'Divide both sides by '+N(b),w:'x = '+N(-c/b)});
+    return{steps,ans:'x =
